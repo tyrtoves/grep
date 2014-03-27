@@ -5,7 +5,10 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <malloc.h>
 #include <fcntl.h>
+
+//нет getline
 
 int seek_substring_KMP (char s[], char p[])
 { 
@@ -42,21 +45,43 @@ int seek_substring_KMP (char s[], char p[])
 
 void grep(char *substr, char* file) {
 	FILE *fp = fopen(file, "r");
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    printf("sdf");
+    
 	if (fp == NULL) {
 		perror(file);
 		return;
 	}
 	
-	while ((read = getline(&line, &len, fp)) != -1) {
-		if (seek_substring_KMP(line, substr) >= 0)
-			printf("%s \n \n", line);
+	int MAXSIZE = 100;
+	char* buf = malloc(MAXSIZE);
+	if (buf == NULL) {
+		perror(buf);
+		fclose(fp);
+		return;
+	}
+	
+	int i = 0;
+	while ( !feof(fp) ) {
+		
+		char c;
+		c = fgetc(fp);
+		if (c != '\n') {
+			buf[i++] = c;
+			if (i == MAXSIZE - 1) {
+				buf = realloc(buf, 2*MAXSIZE);
+				MAXSIZE = MAXSIZE*2;
+			}
+		} 
+		else {
+			buf[i] = '\0';
+			
+			if ( seek_substring_KMP(buf, substr) >= 0) 
+				printf("%s\n", buf);
+			
+			i = 0;
+		}
 	}
 
-    free(line);
+    free(buf);
 	fclose(fp);
 }
 
@@ -87,6 +112,12 @@ void grep_r(char* substr, char* file) {
 
 int main(int argc, char **argv) {
 	int i = 0;
+	//проверить аргументы
+	if (argc < 3) {
+		printf("Wrong number of arguments");
+		exit(0);
+	}
+	
 	
 	if ( strcmp(argv[1], "-R") == 0 ) {
 		for (i = 3; i <= argc - 1; ++i) {
